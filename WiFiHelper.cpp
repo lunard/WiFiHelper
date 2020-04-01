@@ -6,7 +6,9 @@ WiFiHelper::WiFiHelper(String ssid, String password)
     _ssid = ssid;
     _password = password;
     client = new WiFiClient();
+    ntpUdpClient = new WiFiUDP();
     mqttClient = new PubSubClient(*client);
+    timeClient = new NTPClient(*ntpUdpClient);
 }
 
 IPAddress WiFiHelper::connect()
@@ -36,6 +38,14 @@ IPAddress WiFiHelper::connect()
     Serial.println("WiFi connected");
     Serial.println("IP address: ");
     Serial.println(WiFi.localIP());
+
+    timeClient->begin();
+    // Set offset time in seconds to adjust for your timezone, for example:
+    // GMT +1 = 3600
+    // GMT +8 = 28800
+    // GMT -1 = -3600
+    // GMT 0 = 0
+    timeClient->setTimeOffset(2 * 3600);
 
     return WiFi.localIP();
 };
@@ -185,4 +195,26 @@ bool WiFiHelper::downloadFile(fs::FS &fs, String uri, String fileName)
         Serial.println("downloadFile: not connected to a WiFi");
     }
     return result;
+}
+
+// https://github.com/taranais/NTPClient/blob/master/NTPClient.cpp
+String WiFiHelper::getFormattedTime()
+{
+    while (!timeClient->update())
+    {
+        timeClient->forceUpdate();
+    }
+
+    return timeClient->getFormattedTime();
+}
+
+
+unsigned long WiFiHelper::getEpochTime()
+{
+    while (!timeClient->update())
+    {
+        timeClient->forceUpdate();
+    }
+
+    return timeClient->getEpochTime();
 }
